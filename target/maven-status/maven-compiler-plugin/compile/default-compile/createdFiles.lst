@@ -1,0 +1,8 @@
+org/apache/drill/exec/store/pcap/PCAPRecordReader.class
+com/mapr/PacketDecoder$Packet.class
+org/apache/drill/exec/store/pcap/PCAPFormatPlugin.class
+com/mapr/ConcatPcap.class
+com/mapr/PacketDecoder$TcpListener.class
+com/mapr/PacketDecoder.class
+org/apache/drill/exec/store/pcap/PCAPFormatPlugin$PCAPFormatConfig.class
+com/mapr/PacketDecoder$InvalidPcapFormat.class

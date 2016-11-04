@@ -40,33 +40,32 @@ import org.apache.hadoop.conf.Configuration;
 import java.io.IOException;
 import java.util.List;
 
-public class PCAPFormatPlugin extends EasyFormatPlugin<LogFormatPlugin.LogFormatConfig> {
+public class PCAPFormatPlugin extends EasyFormatPlugin<PCAPFormatPlugin.PCAPFormatConfig> {
 
     private static final boolean IS_COMPRESSIBLE = false;
-    private static final String DEFAULT_NAME = "log";
-    private LogFormatConfig config;
+    private static final String DEFAULT_NAME = "pcap";
+    private PCAPFormatConfig pcapConfig;
 
-    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LogFormatPlugin.class);
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PCAPFormatPlugin.class);
 
-    public LogFormatPlugin(String name, DrillbitContext context, Configuration fsConf, StoragePluginConfig storageConfig) {
-        this(name, context, fsConf, storageConfig, new LogFormatConfig());
+    public PCAPFormatPlugin(String name, DrillbitContext context, Configuration fsConf, StoragePluginConfig storageConfig) {
+        this(name, context, fsConf, storageConfig, new PCAPFormatConfig());
     }
 
-    public LogFormatPlugin(String name, DrillbitContext context, Configuration fsConf, StoragePluginConfig config, LogFormatConfig formatPluginConfig) {
+    public PCAPFormatPlugin(String name, DrillbitContext context, Configuration fsConf, StoragePluginConfig config, PCAPFormatConfig formatPluginConfig) {
         super(name, context, fsConf, config, formatPluginConfig, true, false, false, IS_COMPRESSIBLE, formatPluginConfig.getExtensions(), DEFAULT_NAME);
-        this.config = formatPluginConfig;
+        pcapConfig = formatPluginConfig;
     }
 
     @Override
     public RecordReader getRecordReader(FragmentContext context, DrillFileSystem dfs, FileWork fileWork,
                                         List<SchemaPath> columns, String userName) throws ExecutionSetupException {
-        return new LogRecordReader(context, fileWork.getPath(), dfs, columns, config);
+        return new PCAPRecordReader(context, fileWork.getPath(), dfs, columns, pcapConfig);
     }
 
 
     @Override
     public int getReaderOperatorType() {
-        // TODO Is it correct??
         return UserBitShared.CoreOperatorType.JSON_SUB_SCAN_VALUE;
     }
 
@@ -85,18 +84,15 @@ public class PCAPFormatPlugin extends EasyFormatPlugin<LogFormatPlugin.LogFormat
         return null;
     }
 
-    @JsonTypeName("log")
-    public static class LogFormatConfig implements FormatPluginConfig {
+    @JsonTypeName("pcap")
+    public static class PCAPFormatConfig implements FormatPluginConfig {
         public List<String> extensions;
-        public List<String> fieldNames;
-        public String pattern;
 
-        private static final List<String> DEFAULT_EXTS = ImmutableList.of("log");
+        private static final List<String> DEFAULT_EXTS = ImmutableList.of("pcap");
 
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         public List<String> getExtensions() {
             if (extensions == null) {
-                // when loading an old JSONFormatConfig that doesn't contain an "extensions" attribute
                 return DEFAULT_EXTS;
             }
             return extensions;

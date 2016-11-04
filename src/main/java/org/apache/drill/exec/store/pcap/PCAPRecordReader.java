@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.pcap;
 
 
 
+import com.mapr.PacketDecoder;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.exceptions.UserException;
@@ -36,109 +37,100 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.text.ParseException;
 import java.util.List;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 
+public class PCAPRecordReader extends AbstractRecordReader {
 
-public class LogRecordReader extends AbstractRecordReader {
-
-    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LogRecordReader.class);
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PCAPRecordReader.class);
     private static final int MAX_RECORDS_PER_BATCH = 8096;
 
     private String inputPath;
     private BufferedReader reader;
     private DrillBuf buffer;
     private VectorContainerWriter writer;
-    private LogFormatPlugin.LogFormatConfig config;
+    private PCAPFormatPlugin.PCAPFormatConfig config;
     private int lineCount;
-    private Pattern r;
+    private PacketDecoder pd;
+    private FSDataInputStream fsStream;
 
-    public LogRecordReader(FragmentContext fragmentContext, String inputPath, DrillFileSystem fileSystem,
-                            List<SchemaPath> columns, LogFormatPlugin.LogFormatConfig config) throws OutOfMemoryException {
+
+    public PCAPRecordReader(FragmentContext fragmentContext, String inputPath, DrillFileSystem fileSystem,
+                            List<SchemaPath> columns, PCAPFormatPlugin.PCAPFormatConfig pcapFormatConfig)
+        throws OutOfMemoryException {
         try {
-            FSDataInputStream fsStream = fileSystem.open(new Path(inputPath));
+            this.fsStream = fileSystem.open(new Path(inputPath));
             this.inputPath = inputPath;
             this.lineCount = 0;
             this.reader = new BufferedReader(new InputStreamReader(fsStream.getWrappedStream(), "UTF-8"));
             this.config = config;
             this.buffer = fragmentContext.getManagedBuffer();
-            setColumns(columns);
+            this.buffer = fragmentContext.getManagedBuffer();
 
-        } catch(IOException e){
-            logger.debug("Log Reader Plugin: " + e.getMessage());
+        }
+        catch ( Exception e) {
+            logger.debug("PCAP Plugin:" + e.getMessage());
         }
     }
 
+
     public void setup(final OperatorContext context, final OutputMutator output) throws ExecutionSetupException {
         this.writer = new VectorContainerWriter(output);
-        String regex = config.pattern;
-        r = Pattern.compile(regex);
+        try {
+            this.pd = new PacketDecoder(this.fsStream.getWrappedStream());
+        } catch (java.io.IOException e){
+            throw UserException.dataReadError(e).build(logger);
+        }
     }
 
     public int next() {
         this.writer.allocate();
         this.writer.reset();
-
         int recordCount = 0;
 
         try {
-            BaseWriter.MapWriter map = this.writer.rootAsMap();
-            String line = null;
+            com.mapr.PacketDecoder.Packet p;
 
-            while(recordCount < MAX_RECORDS_PER_BATCH &&(line = this.reader.readLine()) != null){
-                lineCount++;
-
-                // Skip empty lines
-                if(line.trim().length() == 0){
-                    continue;
-                }
-
+            p = pd.nextPacket();
+            while( p != null ){
+                BaseWriter.MapWriter map = this.writer.rootAsMap();
                 this.writer.setPosition(recordCount);
                 map.start();
 
-                List<String> fieldNames = config.fieldNames;
-
-
-                Matcher m = r.matcher(line);
-
-                if( m.groupCount() == 0 ) {
-                    throw new ParseException(
-                        "Invalid Regular Expression: No Capturing Groups" , 0
-                    );
+                //Get the protocol
+                String protocol = "UNK";
+                if( p.isTcpPacket() ){
+                    protocol = "TCP";
+                } else if( p.isUdpPacket()) {
+                    protocol = "UDP";
                 }
-                /*else if( m.groupCount() != (fieldNames.size() + 1)) {
-                    throw new ParseException(
-                        "Invalid Regular Expression: Field names do not match capturing groups" , 0
-                    );
-                }*/
 
-                if (m.find()) {
-                    for( int i = 1; i <= m.groupCount(); i++ )
-                    {
-                        String fieldName  = fieldNames.get(i - 1);
-                        String fieldValue = m.group(i);
-                        byte[] bytes = fieldValue.getBytes("UTF-8");
-                        this.buffer.setBytes(0, bytes, 0, bytes.length);
-                        map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
-                    }
-                } else {
-                   throw new ParseException(
-                        "Invalid Log format: " + inputPath + "\n" + lineCount + ":" + line, 0
-                   );
-                }
+                String fieldName  = "Protocol";
+                String fieldValue = protocol;
+                byte[] bytes = fieldValue.getBytes("UTF-8");
+                this.buffer.setBytes(0, bytes, 0, bytes.length);
+                map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
+
+                byte[] fromIP = p.getEthernetSource();
+                this.buffer.setBytes(0, fromIP, 0, fromIP.length);
+                map.varChar("FromIP").writeVarChar(0, fromIP.length, buffer);
+
+
+                fieldName  = "ToIP";
+                fieldValue = p.getEthernetDestination().toString();
+                bytes = fieldValue.getBytes("UTF-8");
+                this.buffer.setBytes(0, bytes, 0, bytes.length);
+                map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
 
                 map.end();
+                p = pd.nextPacket();
                 recordCount++;
             }
 
             this.writer.setValueCount(recordCount);
             return recordCount;
 
-        } catch (final Exception e) {
+        } catch ( final Exception e ) {
             throw UserException.dataReadError(e).build(logger);
         }
     }
