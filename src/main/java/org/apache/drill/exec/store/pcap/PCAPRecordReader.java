@@ -123,6 +123,14 @@ public class PCAPRecordReader extends AbstractRecordReader {
                 this.buffer.setBytes(0, bytes, 0, bytes.length);
                 map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
 
+                fieldName = "PacketLength";
+                int packetLength = p.getPacketLength();
+                map.integer(fieldName).writeInt(packetLength);
+
+                fieldName = "Timestamp";
+                long ts = p.getTimestamp();
+                map.timeStamp(fieldName).writeTimeStamp(ts);
+
                 map.end();
                 p = pd.nextPacket();
                 recordCount++;
