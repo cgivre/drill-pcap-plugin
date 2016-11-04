@@ -1,4 +1,4 @@
-package org.apache.drill.exec.store.log;
+package org.apache.drill.exec.store.pcap;
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one

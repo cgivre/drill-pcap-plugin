@@ -1,4 +1,4 @@
-package org.apache.drill.exec.store.log;
+package org.apache.drill.exec.store.pcap;
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -17,7 +17,6 @@ package org.apache.drill.exec.store.log;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -41,7 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import java.io.IOException;
 import java.util.List;
 
-public class LogFormatPlugin extends EasyFormatPlugin<LogFormatPlugin.LogFormatConfig> {
+public class PCAPFormatPlugin extends EasyFormatPlugin<LogFormatPlugin.LogFormatConfig> {
 
     private static final boolean IS_COMPRESSIBLE = false;
     private static final String DEFAULT_NAME = "log";
