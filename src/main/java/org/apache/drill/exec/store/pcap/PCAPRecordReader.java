@@ -111,10 +111,11 @@ public class PCAPRecordReader extends AbstractRecordReader {
                 this.buffer.setBytes(0, bytes, 0, bytes.length);
                 map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
 
-                byte[] fromIP = p.getEthernetSource();
-                this.buffer.setBytes(0, fromIP, 0, fromIP.length);
-                map.varChar("FromIP").writeVarChar(0, fromIP.length, buffer);
-
+                fieldName  = "FmIP";
+                fieldValue = p.getEthernetSource().toString();
+                bytes = fieldValue.getBytes("UTF-8");
+                this.buffer.setBytes(0, bytes, 0, bytes.length);
+                map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
 
                 fieldName  = "ToIP";
                 fieldValue = p.getEthernetDestination().toString();
