@@ -65,8 +65,6 @@ public class PCAPRecordReader extends AbstractRecordReader {
             this.reader = new BufferedReader(new InputStreamReader(fsStream.getWrappedStream(), "UTF-8"));
             this.config = config;
             this.buffer = fragmentContext.getManagedBuffer();
-            this.buffer = fragmentContext.getManagedBuffer();
-
         }
         catch ( Exception e) {
             logger.debug("PCAP Plugin:" + e.getMessage());
@@ -97,41 +95,72 @@ public class PCAPRecordReader extends AbstractRecordReader {
                 this.writer.setPosition(recordCount);
                 map.start();
 
-                //Get the protocol
-                String protocol = "UNK";
-                if( p.isTcpPacket() ){
-                    protocol = "TCP";
-                } else if( p.isUdpPacket()) {
-                    protocol = "UDP";
+                if( p.isIpV4Packet()) {
+
+
+                    map.integer("ipVersion").writeInt(4);
+
+                    //Get the protocol
+                    String protocol = "UNK";
+                    if (p.isTcpPacket()) {
+                        protocol = "TCP";
+                    } else if (p.isUdpPacket()) {
+                        protocol = "UDP";
+                    }
+
+
+                    String fieldName = "Protocol";
+                    String fieldValue = protocol;
+                    byte[] bytes = fieldValue.getBytes("UTF-8");
+                    this.buffer.setBytes(0, bytes, 0, bytes.length);
+                    map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
+
+                    fieldName = "MACAddressSource";
+                    byte[] IPByteArray = p.getEthernetSource();
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < IPByteArray.length; i++) {
+                        sb.append(String.format("%02X%s", IPByteArray[i], (i < IPByteArray.length - 1) ? ":" : ""));
+                    }
+                    fieldValue = sb.toString();
+                    bytes = fieldValue.getBytes("UTF-8");
+                    this.buffer.setBytes(0, bytes, 0, bytes.length);
+                    map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
+
+                    fieldName = "MACAddressDestination";
+                    IPByteArray = p.getEthernetDestination();
+                    sb = new StringBuilder();
+                    for (int i = 0; i < IPByteArray.length; i++) {
+                        sb.append(String.format("%02X%s", IPByteArray[i], (i < IPByteArray.length - 1) ? ":" : ""));
+                    }
+                    fieldValue = sb.toString();
+                    bytes = fieldValue.getBytes("UTF-8");
+                    this.buffer.setBytes(0, bytes, 0, bytes.length);
+                    map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
+
+                    fieldName = "PacketLength";
+                    int packetLength = p.getPacketLength();
+                    map.integer(fieldName).writeInt(packetLength);
+
+                    fieldName = "Timestamp";
+                    long ts = p.getTimestamp();
+                    map.timeStamp(fieldName).writeTimeStamp(ts);
+
+                    String sourceIP = p.getIPv4Source();
+                    bytes = sourceIP.getBytes("UTF-8");
+                    this.buffer.setBytes(0, bytes, 0, bytes.length);
+                    map.varChar("Source_IP").writeVarChar(0, bytes.length, buffer);
+
+                    String destIP = p.getIPv4Destination();
+                    bytes = destIP.getBytes("UTF-8");
+                    this.buffer.setBytes(0, bytes, 0, bytes.length);
+                    map.varChar("Destination_IP").writeVarChar(0, bytes.length, buffer);
+
+
+                } else if( p.isIpV6Packet()) {
+                    map.integer("ipVersion").writeInt(6);
                 }
-
-                String fieldName  = "Protocol";
-                String fieldValue = protocol;
-                byte[] bytes = fieldValue.getBytes("UTF-8");
-                this.buffer.setBytes(0, bytes, 0, bytes.length);
-                map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
-
-                fieldName  = "FmIP";
-                fieldValue = p.getEthernetSource().toString();
-                bytes = fieldValue.getBytes("UTF-8");
-                this.buffer.setBytes(0, bytes, 0, bytes.length);
-                map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
-
-                fieldName  = "ToIP";
-                fieldValue = p.getEthernetDestination().toString();
-                bytes = fieldValue.getBytes("UTF-8");
-                this.buffer.setBytes(0, bytes, 0, bytes.length);
-                map.varChar(fieldName).writeVarChar(0, bytes.length, buffer);
-
-                fieldName = "PacketLength";
-                int packetLength = p.getPacketLength();
-                map.integer(fieldName).writeInt(packetLength);
-
-                fieldName = "Timestamp";
-                long ts = p.getTimestamp();
-                map.timeStamp(fieldName).writeTimeStamp(ts);
-
                 map.end();
+
                 p = pd.nextPacket();
                 recordCount++;
             }
@@ -146,6 +175,16 @@ public class PCAPRecordReader extends AbstractRecordReader {
 
     public void close() throws Exception {
         this.reader.close();
+    }
+
+    public static int[] bytearray2intarray(byte[] barray)
+    {
+        int[] iarray = new int[barray.length];
+        int i = 0;
+        for (byte b : barray) {
+            iarray[i++] = b & 0xff;
+        }
+        return iarray;
     }
 
 }

@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.apache.calcite:calcite-linq4j:1.4.0-drill-r10">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/calcite/calcite-linq4j/1.4.0-drill-r10/calcite-linq4j-1.4.0-drill-r10.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/calcite/calcite-linq4j/1.4.0-drill-r10/calcite-linq4j-1.4.0-drill-r10-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/calcite/calcite-linq4j/1.4.0-drill-r10/calcite-linq4j-1.4.0-drill-r10-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -182,6 +182,7 @@ public class PacketDecoder {
             etherOffset = 0;
 
             decodeEtherPacket();
+
             return true;
         }
 
@@ -275,6 +276,48 @@ public class PacketDecoder {
         private int ipVersion() {
             return getByte(raw, ipOffset) >>> 4;
         }
+
+        public String getIPv4Source(){
+            String ip = "";
+            byte[] r = new byte[4];
+            System.arraycopy(raw, ipOffset+12, r, 0, 4);
+
+            try{
+                java.net.InetAddress sourceIP = java.net.InetAddress.getByAddress(r);
+
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < r.length; i++) {
+                    sb.append(String.format("%02X%s", r[i], (i < r.length - 1) ? ":" : ""));
+                }
+                ip = sourceIP.getHostAddress();
+
+            } catch(Exception e){
+                System.out.println("Unknown IP address: " + e);
+            }
+
+            return ip;
+        }
+        
+        public String getIPv4Destination(){
+            String ip = "";
+            byte[] r = new byte[4];
+            System.arraycopy(raw, ipOffset+16, r, 0, 4);
+            try{
+                java.net.InetAddress sourceIP = java.net.InetAddress.getByAddress(r);
+
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < r.length; i++) {
+                    sb.append(String.format("%02X%s", r[i], (i < r.length - 1) ? ":" : ""));
+                }
+                ip = sourceIP.getHostAddress();
+
+            } catch(Exception e){
+                System.out.println("Unknown IP address: " + e);
+            }
+
+            return ip;
+    }
+
 
         public byte[] getEthernetSource() {
             byte[] r = new byte[6];
