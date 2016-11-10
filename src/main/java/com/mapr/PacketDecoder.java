@@ -297,7 +297,7 @@ public class PacketDecoder {
 
             return ip;
         }
-        
+
         public String getIPv4Destination(){
             String ip = "";
             byte[] r = new byte[4];
