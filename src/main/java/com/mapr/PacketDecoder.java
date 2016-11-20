@@ -249,7 +249,9 @@ public class PacketDecoder {
                             Preconditions.checkState(false, "Can't handle ENCAPSULATING_SECURITY extension");
                             break;
                         default:
-                            Preconditions.checkState(false, "Unknown V6 extension or protocol: ", nextHeader);
+                            //Preconditions.checkState(false, "Unknown V6 extension or protocol: ", nextHeader);
+                            nextHeader = getByte(raw, ipOffset + headerLength);
+                            headerLength += (getByte(raw, ipOffset + headerLength) + 1) * 8;
                             break;
                     }
                 }
@@ -297,6 +299,9 @@ public class PacketDecoder {
 
             return ip;
         }
+        public int getIPv4Protocol() {
+            return protocol;
+        }
 
         public String getIPv4Destination(){
             String ip = "";
@@ -312,6 +317,7 @@ public class PacketDecoder {
                 ip = sourceIP.getHostAddress();
 
             } catch(Exception e){
+                //TODO Throw exception
                 System.out.println("Unknown IP address: " + e);
             }
 
@@ -329,6 +335,13 @@ public class PacketDecoder {
             byte[] r = new byte[6];
             System.arraycopy(raw, 6, r, 0, 6);
             return r;
+        }
+
+        public int getIPv4SourcePort() {
+            byte[] r = new byte[2];
+            System.arraycopy(raw, subOffset+2, r, 0, 1);
+            int value = ((r[0] & 0xFF) << 24) | ((r[1] & 0xFF) << 16);
+            return value;
         }
 
         public boolean isIpV4Packet() {

@@ -53,6 +53,7 @@ public class PCAPRecordReader extends AbstractRecordReader {
     private int lineCount;
     private PacketDecoder pd;
     private FSDataInputStream fsStream;
+    private int framenumber;
 
 
     public PCAPRecordReader(FragmentContext fragmentContext, String inputPath, DrillFileSystem fileSystem,
@@ -65,6 +66,7 @@ public class PCAPRecordReader extends AbstractRecordReader {
             this.reader = new BufferedReader(new InputStreamReader(fsStream.getWrappedStream(), "UTF-8"));
             this.config = config;
             this.buffer = fragmentContext.getManagedBuffer();
+
         }
         catch ( Exception e) {
             logger.debug("PCAP Plugin:" + e.getMessage());
@@ -74,6 +76,8 @@ public class PCAPRecordReader extends AbstractRecordReader {
 
     public void setup(final OperatorContext context, final OutputMutator output) throws ExecutionSetupException {
         this.writer = new VectorContainerWriter(output);
+        this.framenumber = 1;
+
         try {
             this.pd = new PacketDecoder(this.fsStream.getWrappedStream());
         } catch (java.io.IOException e){
@@ -108,8 +112,10 @@ public class PCAPRecordReader extends AbstractRecordReader {
                         protocol = "UDP";
                     }
 
+                    String fieldName = "Frame_Number";
+                    map.integer(fieldName).writeInt(this.framenumber);
 
-                    String fieldName = "Protocol";
+                    fieldName = "Protocol";
                     String fieldValue = protocol;
                     byte[] bytes = fieldValue.getBytes("UTF-8");
                     this.buffer.setBytes(0, bytes, 0, bytes.length);
@@ -143,7 +149,11 @@ public class PCAPRecordReader extends AbstractRecordReader {
 
                     fieldName = "Timestamp";
                     long ts = p.getTimestamp();
-                    map.timeStamp(fieldName).writeTimeStamp(ts);
+                    ts = ts / 1000000;
+                    map.timeStamp(fieldName).writeTimeStamp(ts * 1000);
+
+                    //map.bigInt("Timestamp").writeBigInt(ts);
+
 
                     String sourceIP = p.getIPv4Source();
                     bytes = sourceIP.getBytes("UTF-8");
@@ -155,6 +165,25 @@ public class PCAPRecordReader extends AbstractRecordReader {
                     this.buffer.setBytes(0, bytes, 0, bytes.length);
                     map.varChar("Destination_IP").writeVarChar(0, bytes.length, buffer);
 
+                    fieldName = "IP_Protocol";
+                    int IPv4protocol = p.getIPv4Protocol();
+                    map.integer(fieldName).writeInt(IPv4protocol);
+
+                    String ip_protocol_name = org.apache.drill.exec.store.pcap.PCAPHelperFunctions.getProtocolName( IPv4protocol );
+                    bytes = ip_protocol_name.getBytes("UTF-8");
+                    this.buffer.setBytes(0, bytes, 0, bytes.length);
+                    map.varChar("IP_Protocol_Name").writeVarChar(0, bytes.length, buffer);
+
+                    String ip_protocol_desc = org.apache.drill.exec.store.pcap.PCAPHelperFunctions.getProtocolDescription( IPv4protocol );
+                    bytes = ip_protocol_desc.getBytes("UTF-8");
+                    this.buffer.setBytes(0, bytes, 0, bytes.length);
+                    map.varChar("IP_Protocol_Desc").writeVarChar(0, bytes.length, buffer);
+
+                    fieldName = "sourcePort";
+                    int IPv4SourcePort = p.getIPv4SourcePort();
+                    map.integer(fieldName).writeInt(IPv4SourcePort);
+
+                    this.framenumber++;
 
                 } else if( p.isIpV6Packet()) {
                     map.integer("ipVersion").writeInt(6);
